@@ -1892,6 +1892,186 @@ class PFHamiltonianGenerator:
                 _sing_idx += 1
 
         return _singlet_states
+    
+    def fast_build_pcqed_pf_hamiltonian(self, n_el, n_ph, omega, lambda_vector): #, E_R, omega, lamvec, mu):
+        """
+        Given an array of n_el E_R values and an n_ph states with fundamental energy omega
+        build the PF Hamiltonian
+
+        n_el : int
+            the number of electronic states (n_el = 1 means only ground-state)
+
+        n_ph : int
+            the number of photon occupation states (n_ph = 1 means only the |0> state)
+
+        E_R : np.array of floats
+            the electronic energies
+            
+        omega : float
+            the energy of the photonic mode
+            
+        lamvec : np.array of floats
+            the lambda vector
+            
+        mu : (n_el x n_el x 3) np.array of floats 
+            mu[i, j, k] is the kth cartesian component of the dipole moment expectation value between 
+            state i and state j
+
+        """
+        #H_PF = np.zeros((n_el * n_ph, n_el * n_ph))
+        singlet_indices = self.sort_dipole_allowed_states(n_el)
+        # see how singlets there are from this sorting!
+        num_singlets = len(singlet_indices)
+
+        # check if there are fewer singlets than the desired number of electronic states
+        if num_singlets < n_el:
+            print(F" There are not {n_el} singlet states!")
+            print(F" There are only {num_singlets} available!")
+            print(F" Reducing the size of the electronic subspace accordingly!")
+            n_el = num_singlets
+    
+        self.PCQED_H_PF = np.zeros((n_el * n_ph, n_el * n_ph))
+        mu_array = np.zeros((n_el, n_el, 3))
+        E_R = self.CIeigs[singlet_indices]
+        mu_array = self.compute_dipole_moments(singlet_indices)
+
+        # take care of the diagonals first
+        # bare electronic and photonic energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                self.PCQED_H_PF[na,na] = E_R[a] + n * omega
+            
+        # diagonal dipole self energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                for g in range(n_el):
+                    self.PCQED_H_PF[na,na] += 0.5 * np.dot(lambda_vector, mu_array[a,g,:]) * np.dot(lambda_vector, mu_array[g,a,:])
+                
+        # off-diagonal dipole self energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                for b in range(n_el):
+                    nb = n * n_el + b
+                    for g in range(n_el):
+                        if a != b:
+                            self.PCQED_H_PF[na, nb] += 0.5 * np.dot(lambda_vector, mu_array[a,g,:]) * np.dot(lambda_vector, mu_array[g, b, :])
+                    
+        # off-diagonal bilinear coupling
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                
+                for m in range(n_ph):
+                    for b in range(n_el):
+                        mb = m * n_el + b
+                        
+                        if n == (m-1) and a != b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na,mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            
+                        elif n == (m+1) and a != b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na, mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1)
+
+        eigs, vecs = np.linalg.eigh(self.PCQED_H_PF)
+        self.PCQED_eigs = np.copy(eigs)
+        self.PCQED_vecs = np.copy(vecs)
+    
+    def build_pcqed_pf_hamiltonian(self, n_el, n_ph, omega, lambda_vector): #, E_R, omega, lamvec, mu):
+        """
+        Given an array of n_el E_R values and an n_ph states with fundamental energy omega
+        build the PF Hamiltonian
+
+        n_el : int
+            the number of electronic states (n_el = 1 means only ground-state)
+
+        n_ph : int
+            the number of photon occupation states (n_ph = 1 means only the |0> state)
+
+        E_R : np.array of floats
+            the electronic energies
+            
+        omega : float
+            the energy of the photonic mode
+            
+        lamvec : np.array of floats
+            the lambda vector
+            
+        mu : (n_el x n_el x 3) np.array of floats 
+            mu[i, j, k] is the kth cartesian component of the dipole moment expectation value between 
+            state i and state j
+
+        """
+        #H_PF = np.zeros((n_el * n_ph, n_el * n_ph))
+        singlet_indices = self.sort_dipole_allowed_states(n_el)
+        # see how singlets there are from this sorting!
+        num_singlets = len(singlet_indices)
+
+        # check if there are fewer singlets than the desired number of electronic states
+        if num_singlets < n_el:
+            print(F" There are not {n_el} singlet states!")
+            print(F" There are only {num_singlets} available!")
+            print(F" Reducing the size of the electronic subspace accordingly!")
+            n_el = num_singlets
+    
+        self.PCQED_H_PF = np.zeros((n_el * n_ph, n_el * n_ph))
+        mu_array = np.zeros((n_el, n_el, 3))
+        E_R = self.CIeigs[singlet_indices]
+        mu_array = self.compute_dipole_moments(singlet_indices)
+
+        # take care of the diagonals first
+        # bare electronic and photonic energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                self.PCQED_H_PF[na,na] = E_R[a] + n * omega
+            
+        # diagonal dipole self energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                for g in range(n_el):
+                    self.PCQED_H_PF[na,na] += 0.5 * np.dot(lambda_vector, mu_array[a,g,:]) * np.dot(lambda_vector, mu_array[g,a,:])
+                
+        # off-diagonal dipole self energy
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                for b in range(n_el):
+                    nb = n * n_el + b
+                    for g in range(n_el):
+                        if a != b:
+                            self.PCQED_H_PF[na, nb] += 0.5 * np.dot(lambda_vector, mu_array[a,g,:]) * np.dot(lambda_vector, mu_array[g, b, :])
+                    
+        # off-diagonal bilinear coupling
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                
+                for m in range(n_ph):
+                    for b in range(n_el):
+                        mb = m * n_el + b
+                        
+                        if n == (m-1) and a != b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na,mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            
+                        elif n == (m+1) and a != b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na, mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1)
+
+        eigs, vecs = np.linalg.eigh(self.PCQED_H_PF)
+        self.PCQED_eigs = np.copy(eigs)
+        self.PCQED_vecs = np.copy(vecs)
+                            
+        
 
     # Building 1RDM
     def calc1RDMfromCIS(self, c_vec):
