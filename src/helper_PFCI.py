@@ -1935,12 +1935,46 @@ class PFHamiltonianGenerator:
         E_R = self.CIeigs[singlet_indices]
         mu_array = self.compute_dipole_moments(singlet_indices)
 
+
+        # create identity array of dimensions n_el x n_el
+        _I = np.eye(n_el)
+
+        # create the array _A of electronic energies
+        _A = E_R * _I
+
+        # create the array _O of omega values
+        _O = omega * _I
+
+        # create an array d = \lambda * mu
+        _d = np.zeros((n_el, n_el))
+        for a in range(n_el):
+            for b in range(n_el):
+                _d[a, b] = np.dot(lambda_vector, mu_array[a, b, :])
+
+        # try the following different approaches to compute D_ab = \sum_g d_ag * d_gb
+        # timing each one and printing the time elapsed
+
+        # 1. Loop based -> D_ab_loop using nested for loops
+
+        # 2. Matrix multiplication -> D_mm = d @ d
+
+        # 3. Einsum based -> D_es;  look at the documentation for np.einsum: https://ajcr.net/Basic-guide-to-einsum/ 
+
+        # 4. Check to make sure each method yields the same result using, 
+        # e.g. assert np.allclose(D_ab_loop, D_mm), etc
+
+        for n in range(n_ph):
+            b_idx = n * n_el
+            f_idx = (n + 1) * n_el
+            self.PCQED_H_PF[b_idx:f_idx, b_idx:f_idx] = _A + n * _O
+
+
         # take care of the diagonals first
         # bare electronic and photonic energy
-        for n in range(n_ph):
-            for a in range(n_el):
-                na = n * n_el + a
-                self.PCQED_H_PF[na,na] = E_R[a] + n * omega
+        #for n in range(n_ph):
+        #    for a in range(n_el):
+        #        na = n * n_el + a
+        #        self.PCQED_H_PF[na,na] = E_R[a] + n * omega
             
         # diagonal dipole self energy
         for n in range(n_ph):
