@@ -1946,10 +1946,23 @@ class PFHamiltonianGenerator:
         _O = omega * _I
 
         # create an array d = \lambda * mu
+        d_loop_start = time.time()
         _d = np.zeros((n_el, n_el))
         for a in range(n_el):
             for b in range(n_el):
                 _d[a, b] = np.dot(lambda_vector, mu_array[a, b, :])
+
+        d_loop_end = time.time()
+
+        d_es_start = time.time()
+        _d_es = np.einsum("k,ijk->ij", lambda_vector, mu_array)
+        d_es_end = time.time()
+
+        assert np.allclose(_d_es, _d)
+        print(F'Time to build d with loops is  {d_loop_end-d_loop_start} seconds')
+        print(F'Time to build d with einsum is {d_es_end-d_es_start} seconds')
+
+        
 
         # try the following different approaches to compute D_ab = \sum_g d_ag * d_gb
         # timing each one and printing the time elapsed
