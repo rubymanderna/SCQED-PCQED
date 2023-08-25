@@ -14,6 +14,7 @@ __copyright__ = "(c) 2014-2023, The Psi4NumPy Developers, Foley Lab, Mapol Proje
 __license__ = "GNU-GPL-3"
 __date__ = "2023-01-21"
 
+import timeit
 import psi4
 import sys
 from helper_cqed_rhf import cqed_rhf
@@ -1935,7 +1936,7 @@ class PFHamiltonianGenerator:
         E_R = self.CIeigs[singlet_indices]
         mu_array = self.compute_dipole_moments(singlet_indices)
 
-
+        
         # create identity array of dimensions n_el x n_el
         _I = np.eye(n_el)
 
@@ -1946,40 +1947,59 @@ class PFHamiltonianGenerator:
         _O = omega * _I
 
         # create an array d = \lambda * mu
-        d_loop_start = time.time()
         _d = np.zeros((n_el, n_el))
         for a in range(n_el):
             for b in range(n_el):
                 _d[a, b] = np.dot(lambda_vector, mu_array[a, b, :])
 
-        d_loop_end = time.time()
-
-        d_es_start = time.time()
-        _d_es = np.einsum("k,ijk->ij", lambda_vector, mu_array)
-        d_es_end = time.time()
-
-        assert np.allclose(_d_es, _d)
-        print(F'Time to build d with loops is  {d_loop_end-d_loop_start} seconds')
-        print(F'Time to build d with einsum is {d_es_end-d_es_start} seconds')
-
-        
-
         # try the following different approaches to compute D_ab = \sum_g d_ag * d_gb
         # timing each one and printing the time elapsed
-
+        # off-diagonal bilinear coupling
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                
+                for m in range(n_ph):
+                    for b in range(n_el):
+                        mb = m * n_el + b
+                        
+                        if n == (m-1) and a!=b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na,mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m) 
+                            
+                        elif n == (m+1) and a!=b:
+                            #print(n, a, na, m, b, mb)
+                            self.PCQED_H_PF[na, mb] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1) 
+                            self.PCQED_H_PF[mb, na] = -np.sqrt(omega / 2) * np.dot(lambda_vector, mu_array[a,b,:]) * np.sqrt(m+1)
         # 1. Loop based -> D_ab_loop using nested for loops
-
+        for n in range(n_ph):
+            for a in range(n_el):
+                na = n * n_el + a
+                for g in range(n_el):
+                    D_ab_loop = np.dot(lam_array, mu_array[a,g,:]) * np.dot(lam_array, mu_array[g,a,:])
+                
         # 2. Matrix multiplication -> D_mm = d @ d
+        d_ag = np.dot(lam_array, mu_array[a, b, :])
+        d_gb = np.dot(lam_array, mu_array[a, b, :])
+        D_mm = d_ag @ d_gb
 
         # 3. Einsum based -> D_es;  look at the documentation for np.einsum: https://ajcr.net/Basic-guide-to-einsum/ 
-
+        D_es = np.einsum('ij,jk->ik', d_ag, d_gb)
         # 4. Check to make sure each method yields the same result using, 
         # e.g. assert np.allclose(D_ab_loop, D_mm), etc
+        assert np.allclose(D_ab_loop, D_mm)
+        assert np.allclose(D_es, D_mm)
+        # for n in range(n_ph):
+        #     b_idx = n * n_el
+        #     f_idx = (n + 1) * n_el
+        #     self.PCQED_H_PF[b_idx:f_idx, b_idx:f_idx] = _A + n * _O
 
-        for n in range(n_ph):
-            b_idx = n * n_el
-            f_idx = (n + 1) * n_el
-            self.PCQED_H_PF[b_idx:f_idx, b_idx:f_idx] = _A + n * _O
+
+        D_es_T = timeit.timeit(f'Time needed with einsum is',D_es)
+        D_ab_loop_T = timeit.timeit(f'Time needed with loop is',D_ab_loop)
+        D_mm = timeit.timeit(D_mm)
+
 
 
         # take care of the diagonals first
