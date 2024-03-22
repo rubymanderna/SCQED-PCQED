@@ -11,4 +11,6 @@ This notebook contains code for PCQED, an ab initio cavity quantum electrodynami
 
 ![image title ](JCTC.png)
 
+Image reference: https://doi.org/10.1021/acs.jctc.3c01207 
+
 
