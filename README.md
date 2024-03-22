@@ -4,3 +4,4 @@ Polaritonic Chemistry is an emerging field at the intersection of chemistry, qua
 
 ## Parameterized cavity quantum electrodynamics(PCQED):
 This notebook contains code for PCQED, an ab initio approach for polaritonic chemistry.   
+![]JCTC.png
