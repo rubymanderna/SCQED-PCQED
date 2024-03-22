@@ -5,7 +5,7 @@ Polaritonic Chemistry is an emerging field at the intersection of chemistry, qua
 ## Parameterized cavity quantum electrodynamics(PCQED):
 
 
-This notebook contains code for PCQED, an ab initio approach for polaritonic chemistry.  
+This notebook contains code for PCQED, an ab initio cavity quantum electrodynamics approach for polaritonic chemistry. This method provides a detailed and rigorous description of the strong light-matter interactions. This approach involves solving two Schrödinger equations in series: a first for the molecular system alone using traditional tools of ab initio quantum chemistry, and the second for the coupled molecular-photonic system that is parametrized by the solutions to the molecular problem.  
 
 
 
