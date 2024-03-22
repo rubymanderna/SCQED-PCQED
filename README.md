@@ -1,10 +1,2 @@
-# Helper Functions
-
-- helper_cqed_rhf.py -> cqed-rhf algorithm, where the Fock matrix is built and diagonalized, etc.  This is what should be modified to implement the level-shift CQED-RHF
-
-- helper_PFCI.py -> helper functions to do CI on the PF Hamiltonian
-
-**Note: To be able to import the helper functions from arbitrary locations, make sure the path to the src directory is included in your python path.  For example, in zsh with the location being $HOME/Code/qed-ci/src, the following line should be in the .zsrhc file**
-
-`export PYTHONPATH=$PYTHONPATH:$HOME/Code/qed-ci/src`
-
+**Polaritonic chemistry** is an emerging field at the intersection of chemistry, quantum optics, and photonics, exploring the profound effects of strong coupling between molecules and light. In traditional chemistry, the interaction between molecules and light is often considered a perturbation, but in polaritonic chemistry, the coupling between molecular excitations and cavity photons can lead to new and intriguing phenomena. This strong interaction can dramatically alter the electronic and vibrational properties of molecules, resulting in the formation of polaritonic states with unique energy landscapes and reactivity. By manipulating these polaritonic states, researchers aim to control chemical reactions, enhance light-matter interactions, and design novel materials with tailored optical and chemical properties. 
+**Parameterized cavity quantum electrodynamics(PCQED)**: This notebook contains code for PCQED, ab initio approach for polaritonic chemistry.   
